@@ -241,7 +241,7 @@ export function Navigation() {
                 <NavLink
                   to="/profile"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted transition-colors"
                 >
                   <Avatar 
                     src={displayUser.avatar} 
@@ -253,6 +253,19 @@ export function Navigation() {
                     <p className="font-medium text-foreground">{displayUser.displayName}</p>
                     <p className="text-sm text-muted-foreground">@{displayUser.username}</p>
                   </div>
+                </NavLink>
+
+                <NavLink
+                  to="/settings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
+                    'hover:bg-muted text-muted-foreground hover:text-foreground',
+                    location.pathname === '/settings' && 'bg-primary/10 text-primary'
+                  )}
+                >
+                  <Settings className="w-5 h-5" />
+                  <span className="font-medium">Настройки</span>
                 </NavLink>
 
                 {isAuthenticated && (
