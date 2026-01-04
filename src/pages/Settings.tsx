@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -63,7 +63,7 @@ const settingsSections = [
   },
 ];
 
-const Settings = () => {
+const Settings = forwardRef<HTMLDivElement>((_, ref) => {
   const [activeSection, setActiveSection] = useState('profile');
   const [formData, setFormData] = useState({
     displayName: currentUser.displayName,
@@ -426,6 +426,8 @@ const Settings = () => {
       </div>
     </MainLayout>
   );
-};
+});
+
+Settings.displayName = 'Settings';
 
 export default Settings;
