@@ -24,7 +24,7 @@ export function MusicPlayer({ className }: MusicPlayerProps) {
     setVolume,
   } = useMusicStore();
 
-  if (!currentTrack) return null;
+  
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -33,23 +33,31 @@ export function MusicPlayer({ className }: MusicPlayerProps) {
   };
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 100, opacity: 0 }}
-        className={cn(
-          'fixed bottom-0 left-0 right-0 z-50',
-          'bg-white/90 backdrop-blur-xl border-t border-border/50',
-          'shadow-float',
-          className
-        )}
-      >
+    <AnimatePresence mode="wait">
+      {currentTrack && (
+        <motion.div
+          key="music-player"
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 100, opacity: 0 }}
+          transition={{ 
+            type: 'spring', 
+            damping: 25, 
+            stiffness: 300,
+            opacity: { duration: 0.2 }
+          }}
+          className={cn(
+            'fixed bottom-0 left-0 right-0 z-50',
+            'bg-white/90 backdrop-blur-xl border-t border-border/50',
+            'shadow-float',
+            className
+          )}
+        >
         {/* Progress bar */}
         <div className="h-1 bg-muted relative">
           <motion.div 
             className="h-full bg-gradient-to-r from-primary to-sky-medium"
-            style={{ width: `${(progress / currentTrack.duration) * 100}%` }}
+            style={{ width: `${(progress / (currentTrack?.duration || 1)) * 100}%` }}
           />
         </div>
 
@@ -59,14 +67,14 @@ export function MusicPlayer({ className }: MusicPlayerProps) {
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="w-12 h-12 rounded-lg overflow-hidden shadow-soft">
                 <img
-                  src={currentTrack.cover}
-                  alt={currentTrack.title}
+                  src={currentTrack?.cover}
+                  alt={currentTrack?.title}
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="min-w-0">
-                <p className="font-medium text-foreground truncate">{currentTrack.title}</p>
-                <p className="text-sm text-muted-foreground truncate">{currentTrack.artist}</p>
+                <p className="font-medium text-foreground truncate">{currentTrack?.title}</p>
+                <p className="text-sm text-muted-foreground truncate">{currentTrack?.artist}</p>
               </div>
             </div>
 
@@ -106,7 +114,7 @@ export function MusicPlayer({ className }: MusicPlayerProps) {
             {/* Time & Volume */}
             <div className="hidden md:flex items-center gap-4 flex-1 justify-end">
               <span className="text-sm text-muted-foreground min-w-[80px] text-right">
-                {formatTime(progress)} / {formatTime(currentTrack.duration)}
+                {formatTime(progress)} / {formatTime(currentTrack?.duration || 0)}
               </span>
               
               <div className="flex items-center gap-2 w-32">
@@ -132,7 +140,8 @@ export function MusicPlayer({ className }: MusicPlayerProps) {
             </Button>
           </div>
         </div>
-      </motion.div>
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 }
