@@ -17,6 +17,7 @@ export function MusicPlayer({ className }: MusicPlayerProps) {
     volume,
     pause, 
     resume, 
+    stop,
     next, 
     previous,
     setProgress,
@@ -124,7 +125,7 @@ export function MusicPlayer({ className }: MusicPlayerProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={pause}
+              onClick={stop}
               className="text-muted-foreground hover:text-foreground ml-2"
             >
               <X className="w-5 h-5" />
