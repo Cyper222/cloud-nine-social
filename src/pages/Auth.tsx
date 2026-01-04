@@ -1,4 +1,4 @@
-import { useState, forwardRef } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Cloud } from 'lucide-react';
@@ -6,11 +6,10 @@ import { CloudLogo } from '@/components/CloudLogo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/store/useAuthStore';
-import { cn } from '@/lib/utils';
 
 type AuthMode = 'login' | 'register';
 
-const Auth = forwardRef<HTMLDivElement>((_, ref) => {
+const Auth = () => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -278,8 +277,6 @@ const Auth = forwardRef<HTMLDivElement>((_, ref) => {
       </motion.div>
     </div>
   );
-});
-
-Auth.displayName = 'Auth';
+};
 
 export default Auth;

@@ -1,4 +1,4 @@
-import { useState, forwardRef } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Send, Phone, Video, MoreVertical, Smile, Paperclip, Image, ArrowLeft } from 'lucide-react';
 import { MainLayout } from '@/components/MainLayout';
@@ -7,12 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { MessageSkeleton } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
-import { mockConversations, mockUsers, currentUser } from '@/services/mockData';
+import { mockConversations, currentUser } from '@/services/mockData';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-const Messages = forwardRef<HTMLDivElement>((_, ref) => {
+const Messages = () => {
   const [selectedConversation, setSelectedConversation] = useState(mockConversations[0]);
   const [messageInput, setMessageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -269,8 +269,6 @@ const Messages = forwardRef<HTMLDivElement>((_, ref) => {
       </div>
     </MainLayout>
   );
-});
-
-Messages.displayName = 'Messages';
+};
 
 export default Messages;
