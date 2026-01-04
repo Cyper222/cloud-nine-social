@@ -141,12 +141,24 @@ export const http = {
     }
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Request failed' }));
+      const text = await response.text();
+      let error;
+      try {
+        error = JSON.parse(text);
+      } catch {
+        error = { message: 'Request failed' };
+      }
       throw new Error(error.message || `HTTP Error: ${response.status}`);
     }
 
     // Handle empty responses
     const text = await response.text();
+    
+    // Check if response is HTML (API not available)
+    if (text.startsWith('<!doctype') || text.startsWith('<html')) {
+      throw new Error('API endpoint not available');
+    }
+    
     return text ? JSON.parse(text) : ({} as T);
   },
 };
