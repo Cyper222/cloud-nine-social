@@ -1,13 +1,9 @@
 import type { User, ApiResponse } from '@/types';
-import type { LoginRequest, RegisterRequest, AuthTokens, AuthUser } from '@/types/auth';
+import type { LoginRequest, RegisterRequest, AuthUser, ProfileUpdateRequest } from '@/types/auth';
 import { currentUser } from './mockData';
-import { api } from './api';
+import { http, tokenManager } from './http';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
-// Token storage in memory (NOT localStorage for access token)
-let accessToken: string | null = null;
-let refreshToken: string | null = null;
 
 export interface LoginCredentials {
   email: string;
@@ -33,6 +29,7 @@ const mapAuthUserToUser = (authUser: AuthUser): User => ({
   displayName: authUser.display_name || authUser.username,
   email: authUser.email,
   avatar: authUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop',
+  bio: authUser.bio,
   isOnline: true,
   friendsCount: 0,
   postsCount: 0,
@@ -42,22 +39,7 @@ const mapAuthUserToUser = (authUser: AuthUser): User => ({
 export const authService = {
   // Get current access token
   getAccessToken(): string | null {
-    return accessToken;
-  },
-
-  // Set tokens after successful auth
-  setTokens(tokens: AuthTokens): void {
-    accessToken = tokens.access_token;
-    refreshToken = tokens.refresh_token;
-    // Store refresh token in sessionStorage (more secure than localStorage)
-    sessionStorage.setItem('refresh_token', tokens.refresh_token);
-  },
-
-  // Clear all tokens
-  clearTokens(): void {
-    accessToken = null;
-    refreshToken = null;
-    sessionStorage.removeItem('refresh_token');
+    return tokenManager.getAccessToken();
   },
 
   // Login with real API
@@ -66,6 +48,7 @@ export const authService = {
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Include cookies
         body: JSON.stringify({
           email: credentials.email,
           password: credentials.password,
@@ -83,13 +66,16 @@ export const authService = {
 
       const data = await response.json();
       
-      // Store tokens
-      this.setTokens(data.tokens);
+      // Store access token in memory
+      const accessToken = data.access_token || data.tokens?.access_token;
+      if (accessToken) {
+        tokenManager.setAccessToken(accessToken);
+      }
 
       const user = mapAuthUserToUser(data.user);
 
       return {
-        data: { user, token: data.tokens.access_token },
+        data: { user, token: accessToken },
         success: true,
       };
     } catch (error) {
@@ -97,9 +83,10 @@ export const authService = {
       
       // Fallback to mock for development
       if (credentials.email && credentials.password) {
-        accessToken = 'mock_jwt_token_' + Date.now();
+        const mockToken = 'mock_jwt_token_' + Date.now();
+        tokenManager.setAccessToken(mockToken);
         return {
-          data: { user: currentUser, token: accessToken },
+          data: { user: currentUser, token: mockToken },
           success: true,
         };
       }
@@ -118,6 +105,7 @@ export const authService = {
       const response = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           username: data.username,
           email: data.email,
@@ -136,13 +124,16 @@ export const authService = {
 
       const responseData = await response.json();
       
-      // Store tokens
-      this.setTokens(responseData.tokens);
+      // Store access token
+      const accessToken = responseData.access_token || responseData.tokens?.access_token;
+      if (accessToken) {
+        tokenManager.setAccessToken(accessToken);
+      }
 
       const user = mapAuthUserToUser(responseData.user);
 
       return {
-        data: { user, token: responseData.tokens.access_token },
+        data: { user, token: accessToken },
         success: true,
       };
     } catch (error) {
@@ -157,9 +148,10 @@ export const authService = {
           displayName: data.displayName || data.username,
           email: data.email,
         };
-        accessToken = 'mock_jwt_token_' + Date.now();
+        const mockToken = 'mock_jwt_token_' + Date.now();
+        tokenManager.setAccessToken(mockToken);
         return {
-          data: { user: newUser, token: accessToken },
+          data: { user: newUser, token: mockToken },
           success: true,
         };
       }
@@ -174,30 +166,30 @@ export const authService = {
 
   // Refresh access token
   async refreshAccessToken(): Promise<boolean> {
-    const storedRefreshToken = refreshToken || sessionStorage.getItem('refresh_token');
-    
-    if (!storedRefreshToken) {
-      return false;
-    }
-
     try {
       const response = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: storedRefreshToken }),
       });
 
       if (!response.ok) {
-        this.clearTokens();
+        tokenManager.clearTokens();
         return false;
       }
 
       const data = await response.json();
-      this.setTokens(data.tokens);
-      return true;
+      const accessToken = data.access_token || data.tokens?.access_token;
+      
+      if (accessToken) {
+        tokenManager.setAccessToken(accessToken);
+        return true;
+      }
+      
+      return false;
     } catch (error) {
       console.error('Token refresh error:', error);
-      this.clearTokens();
+      tokenManager.clearTokens();
       return false;
     }
   },
@@ -205,25 +197,29 @@ export const authService = {
   // Logout and revoke tokens
   async logout(): Promise<void> {
     try {
-      if (accessToken) {
+      const token = tokenManager.getAccessToken();
+      if (token) {
         await fetch(`${API_BASE}/auth/revoke`, {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
+            'Authorization': `Bearer ${token}`,
           },
         });
       }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      this.clearTokens();
+      tokenManager.clearTokens();
     }
   },
 
   // Get current user info
   async getCurrentUser(): Promise<ApiResponse<User>> {
-    if (!accessToken) {
+    const token = tokenManager.getAccessToken();
+    
+    if (!token) {
       // Try to refresh token
       const refreshed = await this.refreshAccessToken();
       if (!refreshed) {
@@ -237,8 +233,9 @@ export const authService = {
 
     try {
       const response = await fetch(`${API_BASE}/auth/me`, {
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          'Authorization': `Bearer ${tokenManager.getAccessToken()}`,
         },
       });
 
@@ -265,16 +262,33 @@ export const authService = {
   },
 
   // Update user profile
-  async updateProfile(updates: Partial<User>): Promise<ApiResponse<User>> {
-    const updatedUser = { ...currentUser, ...updates };
-    return {
-      data: updatedUser,
-      success: true,
-    };
+  async updateProfile(updates: ProfileUpdateRequest): Promise<ApiResponse<User>> {
+    try {
+      const response = await http.request<AuthUser>('/auth/me', {
+        method: 'PATCH',
+        body: updates,
+      });
+      
+      return {
+        data: mapAuthUserToUser(response),
+        success: true,
+      };
+    } catch (error) {
+      // Fallback to mock
+      const updatedUser = { 
+        ...currentUser, 
+        ...updates,
+        displayName: updates.display_name || currentUser.displayName,
+      };
+      return {
+        data: updatedUser,
+        success: true,
+      };
+    }
   },
 
   // Check if user is authenticated
   isAuthenticated(): boolean {
-    return !!accessToken || !!sessionStorage.getItem('refresh_token');
+    return !!tokenManager.getAccessToken();
   },
 };

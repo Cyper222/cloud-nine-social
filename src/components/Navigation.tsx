@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, 
   Search, 
@@ -10,11 +10,13 @@ import {
   Users, 
   Settings,
   Menu,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import { CloudLogo } from './CloudLogo';
 import { Avatar } from './Avatar';
 import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@/store/useAuthStore';
 import { currentUser } from '@/services/mockData';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,6 +34,15 @@ const navItems = [
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout, isAuthenticated } = useAuthStore();
+
+  const displayUser = user || currentUser;
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/auth/login');
+  };
 
   return (
     <>
@@ -84,14 +95,14 @@ export function Navigation() {
             )}
           >
             <Avatar 
-              src={currentUser.avatar} 
-              alt={currentUser.displayName}
+              src={displayUser.avatar} 
+              alt={displayUser.displayName}
               size="sm"
               isOnline={true}
             />
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-foreground truncate">{currentUser.displayName}</p>
-              <p className="text-sm text-muted-foreground truncate">@{currentUser.username}</p>
+              <p className="font-medium text-foreground truncate">{displayUser.displayName}</p>
+              <p className="text-sm text-muted-foreground truncate">@{displayUser.username}</p>
             </div>
           </NavLink>
           
@@ -106,6 +117,16 @@ export function Navigation() {
             <Settings className="w-5 h-5" />
             <span className="font-medium">Настройки</span>
           </NavLink>
+
+          {isAuthenticated && (
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors mt-1 text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Выйти</span>
+            </button>
+          )}
         </div>
       </nav>
 
@@ -216,23 +237,36 @@ export function Navigation() {
                 })}
               </div>
               
-              <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border/50">
+              <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border/50 space-y-2">
                 <NavLink
                   to="/profile"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-4 py-3"
                 >
                   <Avatar 
-                    src={currentUser.avatar} 
-                    alt={currentUser.displayName}
+                    src={displayUser.avatar} 
+                    alt={displayUser.displayName}
                     size="md"
                     isOnline={true}
                   />
                   <div>
-                    <p className="font-medium text-foreground">{currentUser.displayName}</p>
-                    <p className="text-sm text-muted-foreground">@{currentUser.username}</p>
+                    <p className="font-medium text-foreground">{displayUser.displayName}</p>
+                    <p className="text-sm text-muted-foreground">@{displayUser.username}</p>
                   </div>
                 </NavLink>
+
+                {isAuthenticated && (
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-destructive hover:bg-destructive/10"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span className="font-medium">Выйти</span>
+                  </button>
+                )}
               </div>
             </motion.div>
           </>
