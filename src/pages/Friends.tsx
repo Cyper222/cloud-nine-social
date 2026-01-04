@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { Search, UserPlus, UserCheck, Clock, Users, MoreHorizontal, MessageCircle } from 'lucide-react';
 import { MainLayout } from '@/components/MainLayout';
@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { mockUsers, mockFriendRequests } from '@/services/mockData';
 import { cn } from '@/lib/utils';
 
-const Friends = () => {
+const Friends = forwardRef<HTMLDivElement>((_, ref) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [friendRequests, setFriendRequests] = useState(mockFriendRequests);
   const friends = mockUsers.slice(1); // Mock friends
@@ -258,6 +258,8 @@ const Friends = () => {
       </div>
     </MainLayout>
   );
-};
+});
+
+Friends.displayName = 'Friends';
 
 export default Friends;

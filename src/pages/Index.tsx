@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/MainLayout';
 import { CreatePost } from '@/components/CreatePost';
@@ -10,7 +10,7 @@ import type { Post } from '@/types';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const Index = () => {
+const Index = forwardRef<HTMLDivElement>((_, ref) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -118,6 +118,8 @@ const Index = () => {
       </div>
     </MainLayout>
   );
-};
+});
+
+Index.displayName = 'Index';
 
 export default Index;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { Camera, MessageCircle, UserPlus, Settings, Music, Video, Users, Grid3X3, MapPin, Calendar, Link as LinkIcon } from 'lucide-react';
 import { MainLayout } from '@/components/MainLayout';
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { currentUser, mockPosts, mockTracks } from '@/services/mockData';
 import { cn } from '@/lib/utils';
 
-const Profile = () => {
+const Profile = forwardRef<HTMLDivElement>((_, ref) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isOwner] = useState(true); // Check if viewing own profile
   const user = currentUser;
@@ -268,6 +268,8 @@ const Profile = () => {
       </div>
     </MainLayout>
   );
-};
+});
+
+Profile.displayName = 'Profile';
 
 export default Profile;

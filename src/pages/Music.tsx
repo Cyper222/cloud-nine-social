@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Heart, MoreHorizontal, Search, ListMusic, Disc3, Clock, TrendingUp } from 'lucide-react';
 import { MainLayout } from '@/components/MainLayout';
@@ -9,7 +9,7 @@ import { useMusicStore } from '@/store/useMusicStore';
 import { mockTracks } from '@/services/mockData';
 import { cn } from '@/lib/utils';
 
-const Music = () => {
+const Music = forwardRef<HTMLDivElement>((_, ref) => {
   const { currentTrack, isPlaying, play, pause, resume } = useMusicStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [likedTracks, setLikedTracks] = useState<Set<string>>(new Set());
@@ -297,6 +297,8 @@ const Music = () => {
       </div>
     </MainLayout>
   );
-};
+});
+
+Music.displayName = 'Music';
 
 export default Music;

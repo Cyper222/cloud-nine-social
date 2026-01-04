@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Send, Phone, Video, MoreVertical, Smile, Paperclip, Image } from 'lucide-react';
+import { Search, Send, Phone, Video, MoreVertical, Smile, Paperclip, Image, ArrowLeft } from 'lucide-react';
 import { MainLayout } from '@/components/MainLayout';
 import { Avatar } from '@/components/Avatar';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-const Messages = () => {
+const Messages = forwardRef<HTMLDivElement>((_, ref) => {
   const [selectedConversation, setSelectedConversation] = useState(mockConversations[0]);
   const [messageInput, setMessageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -148,12 +148,14 @@ const Messages = () => {
             {/* Chat Header */}
             <div className="p-4 border-b border-border/50 bg-white/70 backdrop-blur-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button 
+                <Button 
+                  variant="ghost"
+                  size="icon"
                   className="md:hidden"
                   onClick={() => setSelectedConversation(null as any)}
                 >
-                  ←
-                </button>
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
                 <Avatar 
                   src={selectedConversation.participant.avatar}
                   alt={selectedConversation.participant.displayName}
@@ -267,6 +269,8 @@ const Messages = () => {
       </div>
     </MainLayout>
   );
-};
+});
+
+Messages.displayName = 'Messages';
 
 export default Messages;
