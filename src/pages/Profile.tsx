@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Camera, MessageCircle, UserPlus, Settings, Music, Video, Users, Grid3X3, MapPin, Calendar, Link as LinkIcon } from 'lucide-react';
 import { MainLayout } from '@/components/MainLayout';
@@ -11,10 +12,15 @@ import { currentUser, mockPosts, mockTracks } from '@/services/mockData';
 import { cn } from '@/lib/utils';
 
 const Profile = () => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [isOwner] = useState(true); // Check if viewing own profile
   const user = currentUser;
   const userPosts = mockPosts.filter(p => p.author.id === user.id);
+
+  const handleEditProfile = () => {
+    navigate('/settings');
+  };
 
   if (isLoading) {
     return (
@@ -88,7 +94,7 @@ const Profile = () => {
               {/* Action Buttons */}
               <div className="flex gap-2 pb-2">
                 {isOwner ? (
-                  <Button variant="outline" className="gap-2">
+                  <Button variant="outline" className="gap-2" onClick={handleEditProfile}>
                     <Settings className="w-4 h-4" />
                     Редактировать
                   </Button>

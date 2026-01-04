@@ -12,6 +12,7 @@ interface MusicState {
   play: (track: MusicTrack) => void;
   pause: () => void;
   resume: () => void;
+  stop: () => void;
   next: () => void;
   previous: () => void;
   setProgress: (progress: number) => void;
@@ -37,6 +38,10 @@ export const useMusicStore = create<MusicState>((set, get) => ({
 
   resume: () => {
     set({ isPlaying: true });
+  },
+
+  stop: () => {
+    set({ currentTrack: null, isPlaying: false, progress: 0 });
   },
 
   next: () => {
