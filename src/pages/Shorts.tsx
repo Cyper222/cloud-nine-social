@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, forwardRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { Heart, MessageCircle, Share2, Music2, MoreVertical, Play, Volume2, VolumeX } from 'lucide-react';
 import { MainLayout } from '@/components/MainLayout';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { mockShorts } from '@/services/mockData';
 import { cn } from '@/lib/utils';
 
-const Shorts = forwardRef<HTMLDivElement>((_, ref) => {
+const Shorts = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLiked, setIsLiked] = useState<Record<string, boolean>>({});
   const [isMuted, setIsMuted] = useState(true);
@@ -204,8 +204,6 @@ const Shorts = forwardRef<HTMLDivElement>((_, ref) => {
       </div>
     </MainLayout>
   );
-});
-
-Shorts.displayName = 'Shorts';
+};
 
 export default Shorts;

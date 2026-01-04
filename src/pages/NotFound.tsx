@@ -1,9 +1,9 @@
 import { useLocation, Link } from "react-router-dom";
-import { useEffect, forwardRef } from "react";
+import { useEffect } from "react";
 import { Cloud, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const NotFound = forwardRef<HTMLDivElement>((_, ref) => {
+const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
@@ -11,7 +11,7 @@ const NotFound = forwardRef<HTMLDivElement>((_, ref) => {
   }, [location.pathname]);
 
   return (
-    <div ref={ref} className="flex min-h-screen items-center justify-center sky-gradient-animated relative overflow-hidden">
+    <div className="flex min-h-screen items-center justify-center sky-gradient-animated relative overflow-hidden">
       {/* Decorative clouds */}
       <div className="absolute inset-0 pointer-events-none">
         <Cloud className="absolute top-1/4 left-10 w-20 h-20 text-white/30 float-slow" />
@@ -36,8 +36,6 @@ const NotFound = forwardRef<HTMLDivElement>((_, ref) => {
       </div>
     </div>
   );
-});
-
-NotFound.displayName = 'NotFound';
+};
 
 export default NotFound;
