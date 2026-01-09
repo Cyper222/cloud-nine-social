@@ -77,9 +77,13 @@ const Settings = () => {
   
   const [activeSection, setActiveSection] = useState('profile');
   const [formData, setFormData] = useState({
-    displayName: user?.displayName || '',
+    firstName: '',
+    lastName: '',
     username: user?.username || '',
     email: user?.email || '',
+    birthday: '',
+    phoneNumber: '',
+    address: '',
     bio: user?.bio || '',
   });
   const [notifications, setNotifications] = useState({
@@ -113,10 +117,15 @@ const Settings = () => {
   // Update form data when user changes
   useEffect(() => {
     if (user) {
+      const nameParts = (user.displayName || '').split(' ');
       setFormData({
-        displayName: user.displayName || '',
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || '',
         username: user.username || '',
         email: user.email || '',
+        birthday: '',
+        phoneNumber: '',
+        address: '',
         bio: user.bio || '',
       });
     }
@@ -167,7 +176,11 @@ const Settings = () => {
     try {
       await authService.updateProfile({
         username: formData.username,
-        display_name: formData.displayName,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        birthday: formData.birthday || undefined,
+        phone_number: formData.phoneNumber || undefined,
+        address: formData.address || undefined,
         bio: formData.bio,
       });
       toast.success('Профиль сохранён');
@@ -258,15 +271,30 @@ const Settings = () => {
 
                     {/* Form Fields */}
                     <div className="grid gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                          Отображаемое имя
-                        </label>
-                        <Input
-                          value={formData.displayName}
-                          onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                          className="bg-white/50"
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Имя
+                          </label>
+                          <Input
+                            value={formData.firstName}
+                            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                            placeholder="Введите имя"
+                            className="bg-white/50"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Фамилия
+                          </label>
+                          <Input
+                            value={formData.lastName}
+                            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                            placeholder="Введите фамилию"
+                            className="bg-white/50"
+                          />
+                        </div>
                       </div>
 
                       <div>
@@ -276,6 +304,7 @@ const Settings = () => {
                         <Input
                           value={formData.username}
                           onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                          placeholder="@username"
                           className="bg-white/50"
                         />
                       </div>
@@ -293,6 +322,43 @@ const Settings = () => {
                         <p className="text-xs text-muted-foreground mt-1">
                           Email нельзя изменить
                         </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Дата рождения
+                        </label>
+                        <Input
+                          type="date"
+                          value={formData.birthday}
+                          onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                          className="bg-white/50"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Номер телефона
+                        </label>
+                        <Input
+                          type="tel"
+                          value={formData.phoneNumber}
+                          onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                          placeholder="+7 (999) 123-45-67"
+                          className="bg-white/50"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Адрес
+                        </label>
+                        <Input
+                          value={formData.address}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          placeholder="Город, страна"
+                          className="bg-white/50"
+                        />
                       </div>
 
                       <div>

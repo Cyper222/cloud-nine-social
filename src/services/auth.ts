@@ -299,7 +299,7 @@ export const authService = {
       const baseUser = currentUserData.data || currentUser;
       
       const user: User = {
-        id: typeof response.user_id === 'string' ? response.user_id : response.user_id.toString(),
+        id: String(response.user_id),
         username: baseUser.username,
         displayName: `${response.first_name || ''} ${response.last_name || ''}`.trim() || baseUser.displayName,
         email: baseUser.email,
