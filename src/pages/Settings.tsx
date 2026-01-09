@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -106,6 +106,8 @@ const Settings = () => {
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [isRevokingAll, setIsRevokingAll] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Load sessions when security section is active
   useEffect(() => {
@@ -191,6 +193,35 @@ const Settings = () => {
     }
   };
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Пожалуйста, выберите изображение');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Размер файла не должен превышать 5MB');
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+      toast.success('Фото выбрано. Нажмите "Сохранить" для применения');
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <MainLayout>
       <div className="container max-w-5xl mx-auto px-4 py-6 pb-20 lg:pb-6">
@@ -255,11 +286,22 @@ const Settings = () => {
                     <div className="flex items-center gap-6">
                       <div className="relative">
                         <Avatar 
-                          src={user?.avatar}
+                          src={avatarPreview || user?.avatar}
                           alt={user?.displayName || 'Пользователь'}
                           size="xl"
                         />
-                        <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarChange}
+                          className="hidden"
+                        />
+                        <button 
+                          type="button"
+                          onClick={handleAvatarClick}
+                          className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors"
+                        >
                           <Camera className="w-4 h-4" />
                         </button>
                       </div>
