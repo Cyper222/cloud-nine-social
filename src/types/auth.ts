@@ -46,6 +46,11 @@ export interface ApiError {
 export interface ProfileUpdateRequest {
   username?: string;
   display_name?: string;
+  first_name?: string;
+  last_name?: string;
+  birthday?: string;
+  phone_number?: string;
+  address?: string;
   bio?: string;
   avatar?: string;
 }
