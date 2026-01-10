@@ -2,33 +2,79 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
+// Load tokens from localStorage on initialization
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 
+// Initialize tokens from localStorage
+const initTokens = () => {
+  try {
+    accessToken = localStorage.getItem('access_token');
+    refreshToken = localStorage.getItem('refresh_token');
+  } catch (e) {
+    // localStorage may not be available
+    accessToken = null;
+    refreshToken = null;
+  }
+};
+initTokens();
+
 // Token management
 export const tokenManager = {
-  getAccessToken: () => accessToken,
+  getAccessToken: () => {
+    // Всегда проверяем localStorage, если токен не в памяти
+    if (!accessToken) {
+      try {
+        accessToken = localStorage.getItem('access_token');
+      } catch (e) {
+        // localStorage недоступен
+      }
+    }
+    return accessToken;
+  },
   
   getRefreshToken: () => refreshToken,
   
   setAccessToken: (token: string | null) => {
     accessToken = token;
+    if (token) {
+      localStorage.setItem('access_token', token);
+    } else {
+      localStorage.removeItem('access_token');
+    }
   },
   
   setRefreshToken: (token: string | null) => {
     refreshToken = token;
+    if (token) {
+      localStorage.setItem('refresh_token', token);
+    } else {
+      localStorage.removeItem('refresh_token');
+    }
   },
   
   setTokens: (access: string | null, refresh: string | null) => {
     accessToken = access;
     refreshToken = refresh;
+    if (access) {
+      localStorage.setItem('access_token', access);
+    } else {
+      localStorage.removeItem('access_token');
+    }
+    if (refresh) {
+      localStorage.setItem('refresh_token', refresh);
+    } else {
+      localStorage.removeItem('refresh_token');
+    }
   },
   
   clearTokens: () => {
     accessToken = null;
     refreshToken = null;
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
   },
 };
 
@@ -97,8 +143,19 @@ export const http = {
     };
 
     // Add auth token if available and not skipped
-    if (!skipAuth && accessToken) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
+    if (!skipAuth) {
+      // Всегда получаем токен из tokenManager (который синхронизирован с localStorage)
+      const currentToken = tokenManager.getAccessToken();
+      if (currentToken) {
+        (headers as Record<string, string>)['Authorization'] = `Bearer ${currentToken}`;
+      } else {
+        // Если токена нет в памяти, пробуем загрузить из localStorage
+        const storedToken = localStorage.getItem('access_token');
+        if (storedToken) {
+          accessToken = storedToken;
+          (headers as Record<string, string>)['Authorization'] = `Bearer ${storedToken}`;
+        }
+      }
     }
 
     const config: RequestInit = {
@@ -129,8 +186,9 @@ export const http = {
           (headers as Record<string, string>)['Authorization'] = `Bearer ${newToken}`;
           response = await fetch(url, { ...config, headers });
         } else {
-          // Refresh failed, redirect to login
-          window.location.href = '/auth/login';
+          // Refresh failed, clear tokens but don't redirect immediately
+          // Let the calling code handle the error
+          tokenManager.clearTokens();
           throw new Error('Session expired');
         }
       } else {

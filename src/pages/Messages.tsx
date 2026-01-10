@@ -7,16 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { MessageSkeleton } from '@/components/Skeleton';
 import { EmptyState } from '@/components/EmptyState';
-import { mockConversations, currentUser } from '@/services/mockData';
+import { mockConversations } from '@/services/mockData';
+import { useAuthStore } from '@/store/useAuthStore';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 const Messages = () => {
+  const { user } = useAuthStore();
   const [selectedConversation, setSelectedConversation] = useState(mockConversations[0]);
   const [messageInput, setMessageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading] = useState(false);
+  
+  if (!user) return null;
 
   // Mock messages for selected conversation
   const mockMessages = [
@@ -28,7 +32,7 @@ const Messages = () => {
     },
     {
       id: '2',
-      senderId: currentUser.id,
+      senderId: user.id,
       content: 'Привет! Всё отлично, спасибо! Как сам?',
       createdAt: '2024-12-20T14:05:00Z',
     },
@@ -40,7 +44,7 @@ const Messages = () => {
     },
     {
       id: '4',
-      senderId: currentUser.id,
+      senderId: user.id,
       content: 'Спасибо! 🙏 Давно хотел поснимать на закате',
       createdAt: '2024-12-20T14:15:00Z',
     },
@@ -127,7 +131,7 @@ const Messages = () => {
                       'text-sm truncate',
                       conv.unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'
                     )}>
-                      {conv.lastMessage.senderId === currentUser.id && 'Вы: '}
+                      {conv.lastMessage.senderId === user.id && 'Вы: '}
                       {conv.lastMessage.content}
                     </p>
                   </div>
@@ -187,7 +191,7 @@ const Messages = () => {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-cloud">
               {mockMessages.map((message, idx) => {
-                const isOwn = message.senderId === currentUser.id;
+                const isOwn = message.senderId === user.id;
                 return (
                   <motion.div
                     key={message.id}

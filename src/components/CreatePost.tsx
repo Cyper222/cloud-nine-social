@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Image, Music, Video, Smile, MapPin, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar } from './Avatar';
-import { currentUser } from '@/services/mockData';
+import { useAuthStore } from '@/store/useAuthStore';
 import { cn } from '@/lib/utils';
 
 interface CreatePostProps {
@@ -11,8 +11,11 @@ interface CreatePostProps {
 }
 
 export function CreatePost({ onPost, className }: CreatePostProps) {
+  const { user } = useAuthStore();
   const [content, setContent] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  
+  if (!user) return null;
 
   const handleSubmit = () => {
     if (content.trim()) {
@@ -30,8 +33,8 @@ export function CreatePost({ onPost, className }: CreatePostProps) {
     )}>
       <div className="flex gap-3">
         <Avatar 
-          src={currentUser.avatar} 
-          alt={currentUser.displayName}
+          src={user.avatar} 
+          alt={user.displayName}
           size="md"
         />
         <div className="flex-1">

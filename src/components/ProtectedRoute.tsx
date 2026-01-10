@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -6,8 +7,19 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, checkAuth, user } = useAuthStore();
   const location = useLocation();
+
+  // Check auth on mount - всегда проверяем при монтировании компонента
+  // checkAuth() теперь использует кэш, поэтому вызов безопасен
+  useEffect(() => {
+    // Проверяем авторизацию при монтировании
+    // Если есть кэш, он загрузится мгновенно, иначе сделается запрос
+    if (!isLoading) {
+      checkAuth();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Вызываем только при монтировании
 
   // Show loading while checking auth
   if (isLoading) {

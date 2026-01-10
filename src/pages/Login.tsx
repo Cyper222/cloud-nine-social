@@ -17,21 +17,20 @@ const Login = () => {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError, isAuthenticated } = useAuthStore();
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (после загрузки всех данных)
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isLoading) {
       navigate('/', { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
     
     const success = await login(formData.email, formData.password);
-    if (success) {
-      navigate('/');
-    }
+    // login() теперь дожидается загрузки полных данных, поэтому навигация произойдет только после завершения
+    // useEffect с isAuthenticated также обработает навигацию
   };
 
   return (

@@ -7,13 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/EmptyState';
-import { mockUsers, mockFriendRequests } from '@/services/mockData';
+import { mockFriendRequests } from '@/services/mockData';
+import { useAuthStore } from '@/store/useAuthStore';
 import { cn } from '@/lib/utils';
 
 const Friends = () => {
+  const { user } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [friendRequests, setFriendRequests] = useState(mockFriendRequests);
-  const friends = mockUsers.slice(1); // Mock friends
+  // TODO: Загрузить реальных друзей из API
+  const friends: any[] = []; // Пока пустой массив, нужно подключить API
 
   const handleAcceptRequest = (requestId: string) => {
     setFriendRequests(prev => prev.filter(r => r.id !== requestId));
@@ -227,7 +230,8 @@ const Friends = () => {
             Возможно, вы знакомы
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {mockUsers.slice(0, 6).map((user, idx) => (
+            {/* TODO: Загрузить реальных пользователей из API */}
+            {friends.slice(0, 6).map((user, idx) => (
               <motion.div
                 key={user.id}
                 initial={{ opacity: 0, y: 20 }}

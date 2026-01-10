@@ -5,12 +5,14 @@ import { CreatePost } from '@/components/CreatePost';
 import { PostCard } from '@/components/PostCard';
 import { PostSkeleton, StorySkeleton } from '@/components/Skeleton';
 import { Avatar } from '@/components/Avatar';
-import { mockPosts, mockUsers } from '@/services/mockData';
+import { mockPosts } from '@/services/mockData';
+import { useAuthStore } from '@/store/useAuthStore';
 import type { Post } from '@/types';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const Index = () => {
+  const { user } = useAuthStore();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -25,9 +27,11 @@ const Index = () => {
   }, []);
 
   const handleNewPost = (content: string) => {
+    if (!user) return;
+    
     const newPost: Post = {
       id: Date.now().toString(),
-      author: mockUsers[0],
+      author: user,
       content,
       likes: 0,
       comments: 0,
@@ -63,20 +67,16 @@ const Index = () => {
                 <StorySkeleton />
               </>
             ) : (
-              mockUsers.slice(0, 6).map((user, idx) => (
+              // TODO: Загрузить реальных пользователей для stories
+              // Пока оставляем пустым или показываем только текущего пользователя
+              user && (
                 <motion.div
                   key={user.id}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: idx * 0.1 }}
                   className="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer"
                 >
-                  <div className={cn(
-                    'w-16 h-16 rounded-full p-[2px]',
-                    idx % 2 === 0 
-                      ? 'bg-gradient-to-br from-primary to-sky-medium' 
-                      : 'bg-gradient-to-br from-sunset-pink to-sunset-orange'
-                  )}>
+                  <div className="w-16 h-16 rounded-full p-[2px] bg-gradient-to-br from-primary to-sky-medium">
                     <div className="w-full h-full rounded-full overflow-hidden bg-white p-[2px]">
                       <img 
                         src={user.avatar} 
@@ -89,7 +89,7 @@ const Index = () => {
                     {user.username}
                   </span>
                 </motion.div>
-              ))
+              )
             )}
           </div>
         </section>

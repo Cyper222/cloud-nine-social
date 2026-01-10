@@ -17,7 +17,6 @@ import { CloudLogo } from './CloudLogo';
 import { Avatar } from './Avatar';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/useAuthStore';
-import { currentUser } from '@/services/mockData';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -37,7 +36,7 @@ export function Navigation() {
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuthStore();
 
-  const displayUser = user || currentUser;
+  const displayUser = user;
 
   const handleLogout = async () => {
     await logout();
@@ -95,14 +94,14 @@ export function Navigation() {
             )}
           >
             <Avatar 
-              src={displayUser.avatar} 
-              alt={displayUser.displayName}
+              src={displayUser?.avatar || ''} 
+              alt={displayUser?.displayName || ''}
               size="sm"
               isOnline={true}
             />
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-foreground truncate">{displayUser.displayName}</p>
-              <p className="text-sm text-muted-foreground truncate">@{displayUser.username}</p>
+              <p className="font-medium text-foreground truncate">{displayUser?.displayName || 'Пользователь'}</p>
+              <p className="text-sm text-muted-foreground truncate">@{displayUser?.username || ''}</p>
             </div>
           </NavLink>
           
@@ -244,14 +243,14 @@ export function Navigation() {
                   className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-muted transition-colors"
                 >
                   <Avatar 
-                    src={displayUser.avatar} 
-                    alt={displayUser.displayName}
+                    src={displayUser?.avatar || ''} 
+                    alt={displayUser?.displayName || ''}
                     size="md"
                     isOnline={true}
                   />
                   <div>
-                    <p className="font-medium text-foreground">{displayUser.displayName}</p>
-                    <p className="text-sm text-muted-foreground">@{displayUser.username}</p>
+                    <p className="font-medium text-foreground">{displayUser?.displayName || 'Пользователь'}</p>
+                    <p className="text-sm text-muted-foreground">@{displayUser?.username || ''}</p>
                   </div>
                 </NavLink>
 

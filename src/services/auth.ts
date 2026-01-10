@@ -1,13 +1,12 @@
 import type { User, ApiResponse } from '@/types';
 import type { LoginRequest, RegisterRequest, AuthUser, ProfileUpdateRequest } from '@/types/auth';
-import { currentUser } from './mockData';
 import { http, tokenManager } from './http';
 
 interface UserProfileRead {
   user_id: string;
   first_name?: string | null;
   last_name?: string | null;
-  birthday?: string | null;
+  birthday?: string | date | null; // Может быть string или date объект
   phone_number?: string | null;
   address?: string | null;
   bio?: string | null;
@@ -41,6 +40,9 @@ const mapAuthUserToUser = (authUser: AuthUser): User => ({
   email: authUser.email,
   avatar: authUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop',
   bio: authUser.bio,
+  birthday: undefined,
+  phoneNumber: undefined,
+  address: undefined,
   isOnline: true,
   friendsCount: 0,
   postsCount: 0,
@@ -77,11 +79,17 @@ export const authService = {
 
       const data = await response.json();
       
-      // Store tokens in memory
+      // Store tokens in memory and localStorage immediately
       const accessToken = data.access_token;
       const refreshToken = data.refresh_token;
+      const sessionId = data.session_id;
       if (accessToken) {
+        // Сохраняем токены синхронно
         tokenManager.setTokens(accessToken, refreshToken || null);
+      }
+      // Сохраняем session_id для определения текущей сессии
+      if (sessionId) {
+        localStorage.setItem('current_session_id', sessionId);
       }
 
       const user = mapAuthUserToUser(data.user);
@@ -92,17 +100,6 @@ export const authService = {
       };
     } catch (error) {
       console.error('Login error:', error);
-      
-      // Fallback to mock for development
-      if (credentials.email && credentials.password) {
-        const mockToken = 'mock_jwt_token_' + Date.now();
-        tokenManager.setAccessToken(mockToken);
-        return {
-          data: { user: currentUser, token: mockToken },
-          success: true,
-        };
-      }
-
       return {
         data: null as unknown as AuthResponseData,
         success: false,
@@ -139,8 +136,13 @@ export const authService = {
       // Store tokens
       const accessToken = responseData.access_token;
       const refreshToken = responseData.refresh_token;
+      const sessionId = responseData.session_id;
       if (accessToken) {
         tokenManager.setTokens(accessToken, refreshToken || null);
+      }
+      // Сохраняем session_id для определения текущей сессии
+      if (sessionId) {
+        localStorage.setItem('current_session_id', sessionId);
       }
 
       const user = mapAuthUserToUser(responseData.user);
@@ -152,22 +154,7 @@ export const authService = {
     } catch (error) {
       console.error('Register error:', error);
       
-      // Fallback to mock for development
-      if (data.email && data.password && data.username) {
-        const newUser: User = {
-          ...currentUser,
-          id: Date.now().toString(),
-          username: data.username,
-          displayName: data.displayName || data.username,
-          email: data.email,
-        };
-        const mockToken = 'mock_jwt_token_' + Date.now();
-        tokenManager.setAccessToken(mockToken);
-        return {
-          data: { user: newUser, token: mockToken },
-          success: true,
-        };
-      }
+      // Не используем fallback на mock - возвращаем ошибку
 
       return {
         data: null as unknown as AuthResponseData,
@@ -234,6 +221,7 @@ export const authService = {
       console.error('Logout error:', error);
     } finally {
       tokenManager.clearTokens();
+      localStorage.removeItem('current_session_id');
     }
   },
 
@@ -254,14 +242,26 @@ export const authService = {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/auth/me`, {
+      // Получаем актуальный токен
+      const currentToken = tokenManager.getAccessToken();
+      if (!currentToken) {
+        return {
+          data: null as unknown as User,
+          success: false,
+          message: 'Токен не найден',
+        };
+      }
+
+      // Получаем базовую информацию пользователя
+      const authResponse = await fetch(`${API_BASE}/auth/me`, {
         credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${tokenManager.getAccessToken()}`,
+          'Authorization': `Bearer ${currentToken}`,
+          'Content-Type': 'application/json',
         },
       });
 
-      if (!response.ok) {
+      if (!authResponse.ok) {
         return {
           data: null as unknown as User,
           success: false,
@@ -269,18 +269,65 @@ export const authService = {
         };
       }
 
-      const data = await response.json();
-      // Бэкенд возвращает UserRead напрямую
-      const user = mapAuthUserToUser(data);
+      const authData = await authResponse.json();
+      let user = mapAuthUserToUser(authData);
+
+      // Получаем расширенную информацию профиля
+      try {
+        const profileResponse = await http.request<UserProfileRead>('/user/me', {
+          method: 'GET',
+        });
+        
+        // Преобразуем birthday в строку если нужно
+        let birthdayStr: string | undefined = undefined;
+        if (profileResponse.birthday) {
+          if (typeof profileResponse.birthday === 'string') {
+            birthdayStr = profileResponse.birthday;
+          } else if (typeof profileResponse.birthday === 'object' && profileResponse.birthday !== null) {
+            // Если это date объект, преобразуем в ISO строку (YYYY-MM-DD)
+            const dateObj = profileResponse.birthday as any;
+            if (typeof dateObj.isoformat === 'function') {
+              birthdayStr = dateObj.isoformat();
+            } else if (typeof dateObj.toISOString === 'function') {
+              birthdayStr = dateObj.toISOString().split('T')[0];
+            } else if (dateObj.year && dateObj.month && dateObj.day) {
+              // Если это date объект с полями year, month, day
+              birthdayStr = `${dateObj.year}-${String(dateObj.month).padStart(2, '0')}-${String(dateObj.day).padStart(2, '0')}`;
+            } else {
+              birthdayStr = String(profileResponse.birthday).split('T')[0] || String(profileResponse.birthday);
+            }
+          }
+        }
+        
+        // Объединяем данные профиля с базовыми данными
+        // Используем данные из /user/me напрямую (они уже сохранены в БД)
+        // avatar_url уже содержит presigned URL (генерируется в UserService.get_me) или null
+        const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop';
+        user = {
+          ...user,
+          displayName: `${profileResponse.first_name || ''} ${profileResponse.last_name || ''}`.trim() || user.displayName || user.username,
+          // Если avatar_url есть (не null и не undefined), используем его, иначе дефолтный
+          avatar: profileResponse.avatar_url || user.avatar || defaultAvatar,
+          bio: profileResponse.bio !== null && profileResponse.bio !== undefined ? profileResponse.bio : (user.bio || ''),
+          birthday: birthdayStr || user.birthday,
+          phoneNumber: profileResponse.phone_number || user.phoneNumber,
+          address: profileResponse.address || user.address,
+        };
+      } catch (profileError) {
+        // Если профиль не найден, используем только базовые данные
+        console.warn('Profile not found, using basic user data');
+      }
+
       return {
         data: user,
         success: true,
       };
     } catch (error) {
-      // Fallback to mock user for development
+      console.error('Failed to get current user:', error);
       return {
-        data: currentUser,
-        success: true,
+        data: null as unknown as User,
+        success: false,
+        message: 'Ошибка загрузки данных пользователя',
       };
     }
   },
@@ -288,43 +335,83 @@ export const authService = {
   // Update user profile
   async updateProfile(updates: ProfileUpdateRequest): Promise<ApiResponse<User>> {
     try {
-      const response = await http.request<UserProfileRead>('/user/me', {
+      // Проверяем токен перед запросом
+      const token = tokenManager.getAccessToken();
+      if (!token) {
+        return {
+          data: null as unknown as User,
+          success: false,
+          message: 'Не авторизован. Пожалуйста, войдите снова.',
+        };
+      }
+
+      // Делаем PATCH запрос - сервер возвращает обновленные данные профиля из БД
+      // Это единственный запрос, который возвращает актуальные данные сразу после сохранения
+      const profileResponse = await http.request<UserProfileRead>('/user/me', {
         method: 'PATCH',
         body: updates,
       });
       
-      // Маппим UserProfileRead в User
-      // Нужно получить текущего пользователя для полной информации
-      const currentUserData = await this.getCurrentUser();
-      const baseUser = currentUserData.data || currentUser;
+      // Получаем базовые данные пользователя (username, email) из /auth/me
+      // Эти данные не меняются при обновлении профиля, но нужны для создания полного User объекта
+      // Делаем запрос синхронно, чтобы получить актуальные данные
+      const authResponse = await fetch(`${API_BASE}/auth/me`, {
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!authResponse.ok) {
+        return {
+          data: null as unknown as User,
+          success: false,
+          message: 'Не удалось загрузить данные пользователя',
+        };
+      }
+
+      const authData = await authResponse.json();
+      const baseUser = mapAuthUserToUser(authData);
       
-      const user: User = {
-        id: String(response.user_id),
-        username: baseUser.username,
-        displayName: `${response.first_name || ''} ${response.last_name || ''}`.trim() || baseUser.displayName,
-        email: baseUser.email,
-        avatar: response.avatar_url || baseUser.avatar,
-        bio: response.bio || baseUser.bio,
-        isOnline: baseUser.isOnline,
-        friendsCount: baseUser.friendsCount,
-        postsCount: baseUser.postsCount,
-        createdAt: baseUser.createdAt,
+      // Создаем обновленный User объект, используя данные из PATCH ответа
+      // Важно: PATCH ответ содержит ОБНОВЛЕННЫЕ данные из БД, используем их напрямую
+      const updatedUser: User = {
+        ...baseUser,
+        displayName: `${profileResponse.first_name || ''} ${profileResponse.last_name || ''}`.trim() || baseUser.displayName || baseUser.username,
+        avatar: profileResponse.avatar_url !== null ? profileResponse.avatar_url : baseUser.avatar,
+        // Используем данные из PATCH ответа напрямую - они уже сохранены в БД
+        // PATCH ответ возвращает ВСЕ поля профиля после обновления, используем их напрямую
+        bio: profileResponse.bio !== null && profileResponse.bio !== undefined ? profileResponse.bio : '',
+        // Преобразуем birthday в строку если нужно
+        birthday: profileResponse.birthday 
+          ? (typeof profileResponse.birthday === 'string' 
+              ? profileResponse.birthday 
+              : (profileResponse.birthday as any)?.isoformat?.() || String(profileResponse.birthday).split('T')[0] || String(profileResponse.birthday))
+          : undefined,
+        phoneNumber: profileResponse.phone_number || undefined,
+        address: profileResponse.address || undefined,
       };
       
-      return {
-        data: user,
-        success: true,
-      };
-    } catch (error) {
-      // Fallback to mock
-      const updatedUser = { 
-        ...currentUser, 
-        ...updates,
-        displayName: updates.display_name || currentUser.displayName,
-      };
       return {
         data: updatedUser,
         success: true,
+      };
+    } catch (error: any) {
+      console.error('Update profile error:', error);
+      // Если ошибка авторизации, возвращаем ошибку вместо fallback
+      if (error.message?.includes('Session expired') || error.message?.includes('401')) {
+        return {
+          data: null as unknown as User,
+          success: false,
+          message: 'Сессия истекла. Пожалуйста, войдите снова.',
+        };
+      }
+      
+      return {
+        data: null as unknown as User,
+        success: false,
+        message: error.message || 'Не удалось обновить профиль',
       };
     }
   },

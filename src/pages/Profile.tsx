@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Camera, MessageCircle, UserPlus, Settings, Music, Video, Users, Grid3X3, MapPin, Calendar, Link as LinkIcon } from 'lucide-react';
@@ -8,21 +8,34 @@ import { PostCard } from '@/components/PostCard';
 import { ProfileSkeleton, PostSkeleton } from '@/components/Skeleton';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { currentUser, mockPosts, mockTracks } from '@/services/mockData';
+import { mockPosts, mockTracks } from '@/services/mockData';
+import { useAuthStore } from '@/store/useAuthStore';
 import { cn } from '@/lib/utils';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, checkAuth, isLoading: authLoading } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(true);
   const [isOwner] = useState(true); // Check if viewing own profile
-  const user = currentUser;
-  const userPosts = mockPosts.filter(p => p.author.id === user.id);
+  
+  // Load user data on mount
+  useEffect(() => {
+    const loadUser = async () => {
+      if (!user) {
+        await checkAuth();
+      }
+      setIsLoading(false);
+    };
+    loadUser();
+  }, [user, checkAuth]);
+  
+  const userPosts = mockPosts.filter(p => p.author.id === user?.id);
 
   const handleEditProfile = () => {
     navigate('/settings');
   };
 
-  if (isLoading) {
+  if (isLoading || authLoading || !user) {
     return (
       <MainLayout>
         <div className="container max-w-3xl mx-auto px-4 py-6">
@@ -125,18 +138,24 @@ const Profile = () => {
               )}
 
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  Москва, Россия
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  Joined January 2024
-                </span>
-                <span className="flex items-center gap-1">
-                  <LinkIcon className="w-4 h-4" />
-                  <a href="#" className="text-primary hover:underline">mysite.com</a>
-                </span>
+                {user.address && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {user.address}
+                  </span>
+                )}
+                {user.birthday && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4" />
+                    {new Date(user.birthday).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </span>
+                )}
+                {user.phoneNumber && (
+                  <span className="flex items-center gap-1">
+                    <LinkIcon className="w-4 h-4" />
+                    {user.phoneNumber}
+                  </span>
+                )}
               </div>
 
               {/* Stats */}

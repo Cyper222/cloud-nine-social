@@ -28,8 +28,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { SessionItem } from '@/components/SessionItem';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/store/useAuthStore';
+import { userCache } from '@/utils/userCache';
 import { sessionsService, type Session } from '@/services/sessions';
 import { authService } from '@/services/auth';
+import { tokenManager } from '@/services/http';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -73,7 +75,7 @@ const settingsSections = [
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, logout, checkAuth, setUser } = useAuthStore();
   
   const [activeSection, setActiveSection] = useState('profile');
   const [formData, setFormData] = useState({
@@ -120,16 +122,17 @@ const Settings = () => {
   useEffect(() => {
     if (user) {
       const nameParts = (user.displayName || '').split(' ');
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         firstName: nameParts[0] || '',
         lastName: nameParts.slice(1).join(' ') || '',
         username: user.username || '',
         email: user.email || '',
-        birthday: '',
-        phoneNumber: '',
-        address: '',
+        birthday: user.birthday || '',
+        phoneNumber: user.phoneNumber || '',
+        address: user.address || '',
         bio: user.bio || '',
-      });
+      }));
     }
   }, [user]);
 
@@ -176,8 +179,15 @@ const Settings = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await authService.updateProfile({
-        username: formData.username,
+      // Проверяем токен перед сохранением
+      const token = tokenManager.getAccessToken();
+      if (!token) {
+        toast.error('Сессия истекла. Пожалуйста, войдите снова.');
+        navigate('/auth/login');
+        return;
+      }
+
+      const response = await authService.updateProfile({
         first_name: formData.firstName,
         last_name: formData.lastName,
         birthday: formData.birthday || undefined,
@@ -185,9 +195,45 @@ const Settings = () => {
         address: formData.address || undefined,
         bio: formData.bio,
       });
-      toast.success('Профиль сохранён');
-    } catch (error) {
-      toast.error('Не удалось сохранить изменения');
+      
+      if (response.success && response.data) {
+        // Используем данные из ответа updateProfile напрямую (они уже обновленные из БД)
+        const updatedUser = response.data;
+        
+        // Обновляем store и кэш сразу с новыми данными из ответа
+        setUser(updatedUser);
+        
+        // Обновляем форму с новыми данными из ответа
+        const nameParts = (updatedUser.displayName || '').split(' ');
+        setFormData({
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || '',
+          username: updatedUser.username || formData.username,
+          email: updatedUser.email || formData.email,
+          birthday: updatedUser.birthday || '',
+          phoneNumber: updatedUser.phoneNumber || '',
+          address: updatedUser.address || '',
+          bio: updatedUser.bio || '',
+        });
+        
+        toast.success('Профиль сохранён');
+      } else {
+        // Если ошибка авторизации, не выходим сразу, показываем ошибку
+        if (response.message?.includes('Сессия истекла') || response.message?.includes('Не авторизован')) {
+          toast.error(response.message);
+          // Даем пользователю возможность попробовать снова
+        } else {
+          toast.error(response.message || 'Не удалось сохранить изменения');
+        }
+      }
+    } catch (error: any) {
+      console.error('Save profile error:', error);
+      // Если ошибка авторизации, не выходим сразу
+      if (error.message?.includes('Session expired') || error.message?.includes('401')) {
+        toast.error('Сессия истекла. Пожалуйста, войдите снова.');
+      } else {
+        toast.error('Не удалось сохранить изменения');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -197,7 +243,7 @@ const Settings = () => {
     fileInputRef.current?.click();
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -207,9 +253,9 @@ const Settings = () => {
       return;
     }
 
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Размер файла не должен превышать 5MB');
+    // Validate file size (20MB)
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Размер файла не должен превышать 20MB');
       return;
     }
 
@@ -217,9 +263,76 @@ const Settings = () => {
     const reader = new FileReader();
     reader.onloadend = () => {
       setAvatarPreview(reader.result as string);
-      toast.success('Фото выбрано. Нажмите "Сохранить" для применения');
     };
     reader.readAsDataURL(file);
+
+    // Upload to MinIO
+    try {
+      setIsSaving(true);
+      
+      // 1. Получаем URL для загрузки
+      const token = tokenManager.getAccessToken();
+      if (!token) {
+        throw new Error('Не авторизован');
+      }
+
+      const uploadUrlResponse = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/user/me/avatar/upload-url`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!uploadUrlResponse.ok) {
+        throw new Error('Не удалось получить URL для загрузки');
+      }
+
+      const { upload_url, object_key } = await uploadUrlResponse.json();
+      console.log('Upload URL response:', { upload_url, object_key });
+
+      // 2. Загружаем файл в MinIO
+      const uploadResponse = await fetch(upload_url, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Не удалось загрузить файл');
+      }
+
+      // 3. Сохраняем avatar_key в профиле
+      console.log('Setting avatar with key:', object_key);
+      const setAvatarResponse = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/user/avatar`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ avatar_key: object_key }),
+      });
+
+      if (!setAvatarResponse.ok) {
+        throw new Error('Не удалось сохранить аватар');
+      }
+
+      // 4. Очищаем кэш и обновляем данные пользователя
+      userCache.clear();
+      await checkAuth();
+      
+      toast.success('Аватар успешно обновлён');
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      toast.error('Не удалось загрузить аватар');
+      setAvatarPreview(null);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -307,7 +420,7 @@ const Settings = () => {
                       </div>
                       <div>
                         <p className="font-medium text-foreground">Фото профиля</p>
-                        <p className="text-sm text-muted-foreground">JPG, PNG до 5MB</p>
+                        <p className="text-sm text-muted-foreground">JPG, PNG до 20MB</p>
                       </div>
                     </div>
 

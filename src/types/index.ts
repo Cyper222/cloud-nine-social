@@ -7,6 +7,9 @@ export interface User {
   avatar: string;
   cover?: string;
   bio?: string;
+  birthday?: string;
+  phoneNumber?: string;
+  address?: string;
   isOnline: boolean;
   friendsCount: number;
   postsCount: number;

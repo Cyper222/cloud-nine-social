@@ -67,6 +67,9 @@ export const sessionsService = {
       
       const sessions = Array.isArray(response) ? response : (response as any).sessions || [];
       
+      // Получаем ID текущей сессии из localStorage
+      const currentSessionId = localStorage.getItem('current_session_id');
+      
       return sessions.map((session: any) => {
         const parsed = parseUserAgent(session.user_agent || session.userAgent || '');
         // Маппим snake_case в camelCase и добавляем недостающие поля
@@ -80,7 +83,7 @@ export const sessionsService = {
           location: session.location,
           createdAt: session.created_at || session.createdAt || new Date().toISOString(),
           lastActiveAt: session.last_active_at || session.lastActiveAt || session.created_at || session.createdAt || new Date().toISOString(),
-          isCurrent: false, // TODO: определить текущую сессию
+          isCurrent: session.id === currentSessionId,
         };
       });
     } catch (error) {
@@ -101,9 +104,14 @@ export const sessionsService = {
     }
   },
 
-  // Revoke a specific session
+  // Revoke a specific session by ID
   async revokeSession(sessionId: string): Promise<void> {
-    await httpPost('/auth/revoke', { session_id: sessionId });
+    await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/sessions/${sessionId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+      },
+    });
   },
 
   // Revoke all sessions except current

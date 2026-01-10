@@ -20,12 +20,12 @@ const Register = () => {
   const navigate = useNavigate();
   const { register, isLoading, error, clearError, isAuthenticated } = useAuthStore();
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (после загрузки всех данных)
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isLoading) {
       navigate('/', { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
 
   const validateForm = (): boolean => {
     if (formData.password.length < 6) {
