@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '@/components/MainLayout';
 import { CreatePost } from '@/components/CreatePost';
 import { PostCard } from '@/components/PostCard';
 import { PostSkeleton, StorySkeleton } from '@/components/Skeleton';
-import { Avatar } from '@/components/Avatar';
 import { mockPosts } from '@/services/mockData';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { Post } from '@/types';
@@ -99,21 +98,35 @@ const Index = () => {
 
         {/* Feed */}
         <section className="space-y-6">
-          {isLoading ? (
-            <>
-              <PostSkeleton />
-              <PostSkeleton />
-              <PostSkeleton />
-            </>
-          ) : (
-            posts.map((post) => (
-              <PostCard 
-                key={post.id} 
-                post={post}
-                className="post-card"
-              />
-            ))
-          )}
+          <AnimatePresence mode="popLayout">
+            {isLoading ? (
+              <>
+                <PostSkeleton />
+                <PostSkeleton />
+                <PostSkeleton />
+              </>
+            ) : (
+              posts.map((post, index) => (
+                <motion.div
+                  key={post.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ 
+                    duration: 0.3, 
+                    delay: index * 0.05,
+                    layout: { duration: 0.3 }
+                  }}
+                >
+                  <PostCard 
+                    post={post}
+                    className="post-card"
+                  />
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
         </section>
       </div>
     </MainLayout>
