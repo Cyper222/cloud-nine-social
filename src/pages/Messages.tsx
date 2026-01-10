@@ -66,7 +66,7 @@ const Messages = () => {
 
   return (
     <MainLayout>
-      <div className="h-[calc(100vh-4rem)] lg:h-screen flex">
+      <div className="h-[calc(100dvh-4rem)] lg:h-screen flex flex-col md:flex-row">
         {/* Conversations List */}
         <div className={cn(
           'w-full md:w-80 lg:w-96 border-r border-border/50 flex flex-col bg-white/50 backdrop-blur-sm',
@@ -148,7 +148,7 @@ const Messages = () => {
 
         {/* Chat Area */}
         {selectedConversation ? (
-          <div className="flex-1 flex flex-col bg-gradient-to-b from-sky-light/30 to-transparent">
+          <div className="flex-1 flex flex-col min-h-0 bg-gradient-to-b from-sky-light/30 to-transparent">
             {/* Chat Header */}
             <div className="p-4 border-b border-border/50 bg-white/70 backdrop-blur-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -189,7 +189,7 @@ const Messages = () => {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-cloud">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-cloud min-h-0">
               {mockMessages.map((message, idx) => {
                 const isOwn = message.senderId === user.id;
                 return (
@@ -231,21 +231,21 @@ const Messages = () => {
             </div>
 
             {/* Message Input */}
-            <div className="p-4 border-t border-border/50 bg-white/70 backdrop-blur-sm">
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="text-muted-foreground">
+            <div className="shrink-0 p-3 sm:p-4 border-t border-border/50 bg-white/70 backdrop-blur-sm safe-area-inset-bottom">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Button variant="ghost" size="icon" className="text-muted-foreground shrink-0 hidden sm:flex">
                   <Paperclip className="w-5 h-5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="text-muted-foreground">
+                <Button variant="ghost" size="icon" className="text-muted-foreground shrink-0 hidden sm:flex">
                   <Image className="w-5 h-5" />
                 </Button>
-                <div className="flex-1 relative">
+                <div className="flex-1 min-w-0 relative">
                   <Input
                     placeholder="Написать сообщение..."
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    className="pr-10 bg-muted/50 border-0"
+                    className="pr-10 bg-muted/50 border-0 text-base"
                   />
                   <button className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     <Smile className="w-5 h-5" />
@@ -254,7 +254,8 @@ const Messages = () => {
                 <Button 
                   onClick={handleSendMessage}
                   disabled={!messageInput.trim()}
-                  className="cloud-button"
+                  size="icon"
+                  className="cloud-button shrink-0"
                 >
                   <Send className="w-5 h-5" />
                 </Button>

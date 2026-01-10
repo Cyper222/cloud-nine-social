@@ -6,7 +6,7 @@ interface UserProfileRead {
   user_id: string;
   first_name?: string | null;
   last_name?: string | null;
-  birthday?: string | date | null; // Может быть string или date объект
+  birthday?: string | Date | null; // Может быть string или Date объект
   phone_number?: string | null;
   address?: string | null;
   bio?: string | null;
